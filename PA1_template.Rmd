@@ -1,20 +1,101 @@
-# Reproducible Research: Peer Assessment 1
+---
+title: "Assignment for Reproducable Research"
+author: "Elvis Zhang"
+date: "Thursday, July 17, 2014"
+output: html_document
+---
 
+##Loading and preprocessing the data
+```{r}
+data<-read.csv("activity.csv")
+cleaneddata<-na.omit(data)
+```
 
-## Loading and preprocessing the data
+##What is mean total number of steps taken per day?
 
+For this part of the assignment, i ignore the missing values in the dataset.
 
+1.Make a histogram of the total number of steps taken each day.
+```{r drawing the histogram }
+sum<-tapply(cleaneddata$steps,cleaneddata$date,sum)
+hist(sum,main="histogram of the total number of steps taken each day",breaks=10)
+```
 
-## What is mean total number of steps taken per day?
+2.Calculate and report the mean and median total number of steps taken per day.
+```{r}
+mean(sum,na.rm=TRUE)
+median(sum,na.rm=TRUE)
+```
 
+##What is the average daily activity pattern?
 
+1.Make a time series plot (i.e. type = "l") of the 5-minute interval (x-axis) and the average number of steps taken, averaged across all days (y-axis)
+```{r drawing the averaged steps across all day}
+avgstep<-tapply(cleaneddata$steps,cleaneddata$interval,mean)
+plot(as.character(head(cleaneddata$interval,288)),as.numeric(avgstep),type="l",col="green",xlab="interval",ylab="average steps",main="the average number of steps taken, averaged across all days")
+```
 
-## What is the average daily activity pattern?
+2.Which 5-minute interval, on average across all the days in the dataset, contains the maximum number of steps?
+```{r}
+avgstep<-data.frame(interval=head(cleaneddata$interval,288),avgstep=as.numeric(avgstep))
+avgstep[avgstep==max(avgstep),1]
+```
 
+##Imputing missing values
+Note that there are a number of days/intervals where there are missing values (coded as NA). The presence of missing days may introduce bias into some calculations or summaries of the data.
 
+1.Calculate and report the total number of missing values in the dataset (i.e. the total number of rows with NAs)
+```{r}
+nrow(data)-nrow(cleaneddata)
+```
 
-## Imputing missing values
+2.Devise a strategy for filling in all of the missing values in the dataset. The strategy does not need to be sophisticated. For example, you could use the mean/median for that day, or the mean for that 5-minute interval, etc.
 
+I decide to replace the unaviable data with the mean for that 5-minute interval.
+```{r}
+replacement<-function(INTV=-1){n<-which(avgstep$"interval"==INTV)
+  avgstep[n,"avgstep"]
+}
+```
 
+3.Create a new dataset that is equal to the original dataset but with the missing data filled in.
+```{r}
+for(i in 1:nrow(data))
+{
+  if(is.na(data[i,"steps"]))
+  {
+    data[i,"steps"]<-replacement(data[i,"interval"])
+  }
+}
 
-## Are there differences in activity patterns between weekdays and weekends?
+```
+
+4.Make a histogram of the total number of steps taken each day and Calculate and report the mean and median total number of steps taken per day. 
+```{r}
+sum<-tapply(data$steps,data$date,sum)
+hist(sum,main="histogram of the total number of steps taken each day after imputing the missing value",breaks=10)
+```
+
+After imputing the missing valuables, the estimates of the total daily number of steps increase comparing with former estimates made in first part of the assignmeng.
+
+##Are there differences in activity patterns between weekdays and weekends?
+
+1.Create a new factor variable in the dataset with two levels - "weekday" and "weekend" indicating whether a given date is a weekday or weekend day.
+```{r}
+day<-weekdays(as.Date(as.vector(data$date)))
+weekend<-c("Saturday","Sunday")
+data$weekend<- (day %in% weekend )
+data$weekend<-as.factor(data$weekend)
+levels(data$weekend)<-c("Weekday","Weekend")
+```
+
+2.Make a panel plot containing a time series plot (i.e. type = "l") of the 5-minute interval (x-axis) and the average number of steps taken, averaged across all weekday days or weekend days (y-axis).
+```{r}
+data<-split(data,data$weekend)
+weekday<-data$Weekday
+weekend<-data$Weekend
+avgstepofweekday<-tapply(weekday$steps,weekday$interval,mean)
+avgstepofweekend<-tapply(weekend$steps,weekend$interval,mean)
+plot(as.character(head(cleaneddata$interval,288)),as.numeric(avgstepofweekday),type="l",col="green",xlab="interval",ylab="average steps",main="the average number of steps taken, averaged across all weekday")
+plot(as.character(head(cleaneddata$interval,288)),as.numeric(avgstepofweekend),type="l",col="green",xlab="interval",ylab="average steps",main="the average number of steps taken, averaged across all weekend")
+```
